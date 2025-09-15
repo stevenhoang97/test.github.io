@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Page</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .monthly-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .monthly-btn:hover {
+            background-color: #45a049;
+        }
+        .yearly-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        .yearly-btn:hover {
+            background-color: #1976D2;
+        }
+        .error {
+            color: #f44336;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            display: none;
+        }
+        .user-info {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Payment Page</h2>
+        
+        <div class="error" id="errorMessage"></div>
+        <div class="loading" id="loadingMessage">Loading...</div>
+        
+        <div class="user-info" id="userInfo">
+            <strong>Welcome <span id="userEmail"></span></strong>
+        </div>
+        
+        <div class="form-group">
+            <label for="userId">User ID:</label>
+            <input type="text" id="userId" placeholder="Enter your user ID" />
+        </div>
+        
+        <div class="button-group">
+            <button class="monthly-btn" onclick="handlePayment('monthly')">
+                Buy Package A - 100 Yen (Monthly)
+            </button>
+            <button class="yearly-btn" onclick="handlePayment('yearly')">
+                Buy Package B - 1000 Yen (Yearly)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://evqvhitpuxzoqdexltsq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cXZoaXRwdXh6b3FkZXhsdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzOTE4MTUsImV4cCI6MjA2MDk2NzgxNX0.placeholder'; // You'll need to replace this with your actual anon key
+        
+        // Initialize Supabase client
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const userIdFromUrl = urlParams.get('userId');
+        
+        // If userId is in URL, populate the input and validate user
+        if (userIdFromUrl) {
+            document.getElementById('userId').value = userIdFromUrl;
+            validateUser(userIdFromUrl);
+        }
+        
+        async function validateUser(userId) {
+            if (!userId) {
+                showError('Please enter a user ID');
+                return false;
+            }
+            
+            showLoading('Validating user...');
+            hideError();
+            
+            try {
+                // Note: This requires service role key for admin operations
+                // For client-side, you might need to use a different approach
+                // or create a public endpoint that validates users
+                
+                // For now, we'll assume the user is valid if they have a UUID format
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (!uuidRegex.test(userId)) {
+                    throw new Error('Invalid user ID format');
+                }
+                
+                // Show user info (you might want to fetch actual user data from your API)
+                document.getElementById('userEmail').textContent = 'User ' + userId.substring(0, 8) + '...';
+                document.getElementById('userInfo').style.display = 'block';
+                hideLoading();
+                return true;
+                
+            } catch (error) {
+                showError('Invalid user ID: ' + error.message);
+                hideLoading();
+                return false;
+            }
+        }
+        
+        async function handlePayment(planType) {
+            const userId = document.getElementById('userId').value;
+            
+            if (!userId) {
+                showError('Please enter a user ID');
+                return;
+            }
+            
+            // Validate user first
+            const isValidUser = await validateUser(userId);
+            if (!isValidUser) {
+                return;
+            }
+            
+            showLoading('Creating checkout session...');
+            hideError();
+            
+            try {
+                // Call the Supabase Edge Function directly
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session-08-09`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        plan_type: planType
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                hideLoading();
+                
+                if (data.checkoutUrl) {
+                    // Redirect to Stripe checkout
+                    window.location.href = data.checkoutUrl;
+                } else {
+                    showError('No checkout URL received from server');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                showError('Error creating checkout session: ' + error.message);
+                console.error('Payment error:', error);
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        function showLoading(message) {
+            const loadingDiv = document.getElementById('loadingMessage');
+            loadingDiv.textContent = message;
+            loadingDiv.style.display = 'block';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+        
+        // Add event listener for Enter key on userId input
+        document.getElementById('userId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateUser(this.value);
+            }
+        });
+    </script>
+</body>
+</html>
