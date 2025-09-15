@@ -224,17 +224,8 @@
                 console.log('Calling edge function with body:', requestBody);
                 
                 // Call the Supabase Edge Function using the supabase client                
-                const { data, error } = await supabaseAnon.functions.invoke('create-checkout-session-08-09', {
-                    headers: {
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Headers': 'apikey,authorization,x-client-info,x-supabase-api-version',
-                        'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS,TRACE,CONNECT',
-                        'Access-Control-Allow-Credentials': 'true',
-                    },
-                    body: requestBody
+                const { data, error } = await supabase.functions.invoke('create-checkout-session-08-09', {
+                    body: JSON.stringify(requestBody)
                 });
                 
                 console.log('Edge function response - data:', data);
