@@ -122,25 +122,31 @@
         const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cXZoaXRwdXh6b3FkZXhsdHNxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NTM5MTgxNSwiZXhwIjoyMDYwOTY3ODE1fQ.VFUFitY2gENbcCdVJf_4ZQBuIM_ETauz6eydFwip0oE';
         
         // Initialize Supabase client with service role key for admin operations
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-        
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const userIdFromUrl = urlParams.get('userId');
-        
-        console.log('URL Parameters:', Object.fromEntries(urlParams));
-        console.log('User ID from URL:', userIdFromUrl);
-        
-        // Check if userId is provided in URL
-        if (!userIdFromUrl) {
-            console.error('Missing userId parameter in URL');
-            showError('Missing userId parameter in URL');
-            return;
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        console.log(supabase);        
+        // Initialize the page
+        function initializePage() {
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const userIdFromUrl = urlParams.get('userId');
+            
+            console.log('URL Parameters:', Object.fromEntries(urlParams));
+            console.log('User ID from URL:', userIdFromUrl);
+            
+            // Check if userId is provided in URL
+            if (!userIdFromUrl) {
+                console.error('Missing userId parameter in URL');
+                showError('Missing userId parameter in URL');
+                return;
+            }
+            
+            // Populate the hidden input and validate user
+            document.getElementById('userId').value = userIdFromUrl;
+            validateUser(userIdFromUrl);
         }
         
-        // Populate the hidden input and validate user
-        document.getElementById('userId').value = userIdFromUrl;
-        validateUser(userIdFromUrl);
+        // Start the page initialization
+        initializePage();
         
         async function validateUser(userId) {
             console.log('validateUser called with userId:', userId);
@@ -219,7 +225,7 @@
                 
                 // Call the Supabase Edge Function using the supabase client
                 const { data, error } = await supabase.functions.invoke('create-checkout-session-08-09', {
-                    body: requestBody
+                    body: JSON.stringify(requestBody)
                 });
                 
                 console.log('Edge function response - data:', data);
